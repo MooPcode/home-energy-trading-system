@@ -16,6 +16,7 @@ public class ApplianceAgent extends Agent {
 		// Send messages to two agents whose names are "a1" and "a2" (hard-coded)
 		ACLMessage msg = new ACLMessage(ACLMessage.SUBSCRIBE);
 		msg.addReceiver(new AID("home", AID.ISLOCALNAME));
+		msg.setContent("appliance");
 		send(msg);
 		
 		addBehaviour(new CyclicBehaviour(this) {
@@ -24,18 +25,17 @@ public class ApplianceAgent extends Agent {
 				ACLMessage msg = receive();
 				if (msg != null) {
 					// Handle message
-					System.out.println(getLocalName()+ ": Received message " + msg.getContent() + " from " + msg.getSender().getLocalName());
+					//System.out.println(getLocalName()+ ": Received message " + msg.getContent() + " from " + msg.getSender().getLocalName());
 					
 					// Get usage command
 					if(msg.getContent().contains("GetUsage"))
 					{
 						// Reply to message
 						ACLMessage reply = msg.createReply();
-						reply.setPerformative(ACLMessage.INFORM);
-						reply.setContent(String.valueOf(getUsage()));
+						reply.setPerformative(50);
+						reply.setContent("USAGE:" + String.valueOf(getUsage()));
 						// Send reply
-						System.out.println(getLocalName() + ": Sending response " +
-						reply.getContent() + " to " + msg.getAllReceiver().next());
+						//System.out.println(getLocalName() + ": Sending response " + reply.getContent() + " to " + msg.getAllReceiver().next());
 						send(reply);	
 					}
 			}
@@ -45,6 +45,6 @@ public class ApplianceAgent extends Agent {
 
 	public int getUsage()
 	{
-		return (int) Math.round(Math.random() * 10);
+		return (int) Math.round(Math.random() * 1000);
 	}
 }
