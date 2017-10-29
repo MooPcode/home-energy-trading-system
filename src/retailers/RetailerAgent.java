@@ -13,23 +13,15 @@ import jade.domain.FIPAAgentManagement.RefuseException;
 import jade.domain.FIPAAgentManagement.FailureException;
 
 import org.json.simple.JSONObject;
-import org.json.simple.JSONArray;
 import org.json.simple.parser.ParseException;
 import org.json.simple.parser.JSONParser;
 
 abstract class RetailerAgent extends Agent{
-	int contractLength = 0; // how long the home has been with this retailer
-	float initialPrice = 50; // the starting price
 	int minPrice = 8; // minimum cost per unit
-	int maxPrice = 500; // maximum cost per unit
-	int lastRequest = 0;
-	int lastRequestRound = 0;
-	boolean inUse = false; // whether they are currently being used by home
-	ArrayList<Float> priceHistory = new ArrayList<Float>(); // history of prices  
+	int lastRequest = 0; // the electricity required in the last request
+	int lastRequestRound = 0; // the round of the last request
 	
-	public RetailerAgent() 
-	{
-		priceHistory.add(initialPrice);
+	public RetailerAgent() {
 	}
 	
 	protected void setup()
@@ -78,11 +70,6 @@ abstract class RetailerAgent extends Agent{
 				double discount = (lastRequestRound - 1) * (price * 0.05);
 				double finalPrice = price - discount;
 
-				if(lastRequestRound > 1)
-				{
-					//System.out.println("Offering discount of " + discount);
-				}
-
 				// if it goes below the min price per unit, dont offer the discount
 				if(finalPrice / lastRequest < minPrice)
 					finalPrice = price;
@@ -96,16 +83,4 @@ abstract class RetailerAgent extends Agent{
 
 	// the price the home buys at (per unit)
 	abstract public float GetCurrentPrice(int power);
-	
-	// the price the home sells at (per unit)
-	public float GetSellingPrice()
-	{
-		return 5;
-	}
-	
-	public void tick()
-	{
-		if(inUse)
-			contractLength++;
-	}
 }

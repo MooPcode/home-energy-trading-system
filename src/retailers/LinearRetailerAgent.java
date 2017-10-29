@@ -7,6 +7,7 @@ public class LinearRetailerAgent extends RetailerAgent {
         // total price = power
         int minPrice = 2;
         int gradient = 10;
+
         // total = gradient * power + min;
         int price = gradient * power + minPrice;
 

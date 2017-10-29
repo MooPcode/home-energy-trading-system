@@ -12,16 +12,16 @@ import jade.lang.acl.*;
 import org.json.simple.JSONObject;
 
 public class HomeAgent extends Agent {
-	AID currentRetailer;
-	List<AID> retailers = new ArrayList<AID>();
-	List<AID> appliances = new ArrayList<AID>();
-	Map<AID, Float> applianceUsage = new HashMap<AID, Float>();
-	Map<AID, Float> retailerOffers = new HashMap<AID, Float>();
-	private int nResponders;
+	private AID currentRetailer; // the current retailer / last retailer bought from
+	private List<AID> appliances = new ArrayList<AID>(); // list of known appliances
+	private List<AID> retailers = new ArrayList<AID>(); // list of known retailers
+	private Map<AID, Float> applianceUsage = new HashMap<AID, Float>(); // usage for each appliance
+	private Map<AID, Float> retailerOffers = new HashMap<AID, Float>(); // list of retailer offers
+	private int nResponders; // number of responders to expect
 	private int maxPrice = 10; // per unit
-	private int round = 1;
-	private int maxRounds = 3;
-	private int currentRoundPower = 0;
+	private int maxRounds = 3; // max number of rounds in negotiation
+	private int round = 1; // current round of negotiation
+	private int currentRoundPower = 0; // a cached power value for negotiation
 	
 	public HomeAgent() {
 
