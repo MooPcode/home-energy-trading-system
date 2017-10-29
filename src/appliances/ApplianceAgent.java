@@ -13,7 +13,6 @@ public class ApplianceAgent extends Agent {
 	}
 	
 	protected void setup() {
-		// Send messages to two agents whose names are "a1" and "a2" (hard-coded)
 		ACLMessage msg = new ACLMessage(ACLMessage.SUBSCRIBE);
 		msg.addReceiver(new AID("home", AID.ISLOCALNAME));
 		msg.setContent("appliance");
@@ -21,12 +20,8 @@ public class ApplianceAgent extends Agent {
 		
 		addBehaviour(new CyclicBehaviour(this) {
 			public void action() {
-				//System.out.println(getLocalName() + ": Waiting for message");
 				ACLMessage msg = receive();
 				if (msg != null) {
-					// Handle message
-					//System.out.println(getLocalName()+ ": Received message " + msg.getContent() + " from " + msg.getSender().getLocalName());
-					
 					// Get usage command
 					if(msg.getContent().contains("GetUsage"))
 					{
@@ -34,8 +29,8 @@ public class ApplianceAgent extends Agent {
 						ACLMessage reply = msg.createReply();
 						reply.setPerformative(50);
 						reply.setContent("USAGE:" + String.valueOf(getUsage()));
+
 						// Send reply
-						//System.out.println(getLocalName() + ": Sending response " + reply.getContent() + " to " + msg.getAllReceiver().next());
 						send(reply);	
 					}
 			}

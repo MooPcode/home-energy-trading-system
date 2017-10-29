@@ -18,7 +18,7 @@ public class HomeAgent extends Agent {
 	Map<AID, Float> applianceUsage = new HashMap<AID, Float>();
 	Map<AID, Float> retailerOffers = new HashMap<AID, Float>();
 	private int nResponders;
-	private int maxPrice = 5; // per unit
+	private int maxPrice = 10; // per unit
 	private int round = 1;
 	private int maxRounds = 3;
 	private int currentRoundPower = 0;
@@ -103,6 +103,7 @@ public class HomeAgent extends Agent {
 
 				msg.setContent(obj.toJSONString());
 
+				log("######################################");
 
 				addBehaviour(new RetailerNegotiate(myAgent, msg));
 			}
@@ -133,20 +134,18 @@ public class HomeAgent extends Agent {
 		}
 
 		protected void handleAgree(ACLMessage agree) {
-			System.out.println(getLocalName() + ": " + agree.getSender().getName() + " has agreed to the request");
+			log(agree.getSender().getLocalName() + " has agreed to the request");
 		}
 
 		// Method to handle an inform message from responder
 		protected void handleInform(ACLMessage inform) {
-			//System.out.println(getLocalName() + ": " + inform.getSender().getName() + " successfully performed the requested action");
-			System.out.println(getLocalName() + ": " + inform.getSender().getName() + "'s offer is " + inform.getContent());
+			log(inform.getSender().getLocalName() + "'s offer is " + inform.getContent());
 
 			retailerOffers.put(inform.getSender(), Float.valueOf(inform.getContent()));
 		}
 
 		// Method to handle a refuse message from responder
 		protected void handleRefuse(ACLMessage refuse) {
-			//System.out.println(getLocalName() + ": " + refuse.getSender().getName() + " refused to perform the requested action");
 			nResponders--;
 		}
 
@@ -164,10 +163,9 @@ public class HomeAgent extends Agent {
 		protected void handleAllResultNotifications(Vector notifications) {
 			if (notifications.size() < retailers.size()) {
 				// Some responder didn't reply within the specified timeout
-				System.out.println(
-						getLocalName() + ": " + "Timeout expired: missing " + (nResponders - notifications.size()) + " responses");
+				log("Timeout expired: missing " + (nResponders - notifications.size()) + " responses");
 			} else {
-				log("Received notifications about every responder.");
+				log("Received notifications from every retailer.");
 				log("Finding best offer...");
 
 				// compare all the offers to see if who offered the best
@@ -205,6 +203,8 @@ public class HomeAgent extends Agent {
 					obj.put("usage", getPowerDemand());
 					obj.put("round", round);
 					msg.setContent(obj.toJSONString());
+
+					log("######################################");
 
 					addBehaviour(new RetailerNegotiate(myAgent, msg));
 
