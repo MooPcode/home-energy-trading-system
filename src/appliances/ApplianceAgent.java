@@ -45,6 +45,6 @@ public class ApplianceAgent extends Agent {
 
 	public int getUsage()
 	{
-		return (int) Math.round(Math.random() * 1000);
+		return (int) Math.round(Math.random() * 100);
 	}
 }
