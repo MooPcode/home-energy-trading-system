@@ -12,13 +12,18 @@ import jade.domain.FIPAAgentManagement.NotUnderstoodException;
 import jade.domain.FIPAAgentManagement.RefuseException;
 import jade.domain.FIPAAgentManagement.FailureException;
 
+import org.json.simple.JSONObject;
+import org.json.simple.JSONArray;
+import org.json.simple.parser.ParseException;
+import org.json.simple.parser.JSONParser;
 
-public class RetailerAgent extends Agent{
+abstract class RetailerAgent extends Agent{
 	int contractLength = 0; // how long the home has been with this retailer
 	float initialPrice = 50; // the starting price
-	float minPrice = 1; // minimum cost per unit
-	float maxPrice = 500; // maximum cost per unit
+	int minPrice = 8; // minimum cost per unit
+	int maxPrice = 500; // maximum cost per unit
 	int lastRequest = 0;
+	int lastRequestRound = 0;
 	boolean inUse = false; // whether they are currently being used by home
 	ArrayList<Float> priceHistory = new ArrayList<Float>(); // history of prices  
 	
@@ -44,7 +49,18 @@ public class RetailerAgent extends Agent{
 		// The responder can either choose to agree to request or refuse request
 		addBehaviour(new AchieveREResponder(this, template) {
 			protected ACLMessage prepareResponse(ACLMessage request) throws NotUnderstoodException, RefuseException {
-				lastRequest = Integer.parseInt(request.getContent().replace("QUOTE:", ""));
+				JSONParser parser = new JSONParser();
+				String s = request.getContent();
+
+				try {
+					Object obj = parser.parse(s);
+					JSONObject jsonObj = (JSONObject)obj;
+					lastRequest = ((Long)jsonObj.get("usage")).intValue();
+					lastRequestRound = ((Long)jsonObj.get("round")).intValue();
+				}	catch(ParseException pe){
+					System.err.println("Invalid JSON encountered");
+					System.err.println(s);
+				}
 
 				ACLMessage agree = request.createReply();
 				agree.setPerformative(ACLMessage.AGREE);
@@ -52,24 +68,34 @@ public class RetailerAgent extends Agent{
 			}
 
 			// If the agent agreed to the request received, then it has to perform the associated action and return the result of the action
-			protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response)
-					throws FailureException {
+			protected ACLMessage prepareResultNotification(ACLMessage request, ACLMessage response) throws FailureException {
 				ACLMessage inform = request.createReply();
 				inform.setPerformative(ACLMessage.INFORM);
-				inform.setContent(String.valueOf(GetCurrentPrice(lastRequest)));
+
+				float price = GetCurrentPrice(lastRequest);
+
+				// if we are past round 1, try and offer discounts to win over the home
+				double discount = (lastRequestRound - 1) * (price * 0.05);
+				double finalPrice = price - discount;
+
+				if(lastRequestRound > 1)
+				{
+					//System.out.println("Offering discount of " + discount);
+				}
+
+				// if it goes below the min price per unit, dont offer the discount
+				if(finalPrice / lastRequest < minPrice)
+					finalPrice = price;
+
+				inform.setContent(String.valueOf(finalPrice));
+
 				return inform;
 			}
 		});
 	}
 
 	// the price the home buys at (per unit)
-	public float GetCurrentPrice(int power)
-	{
-		int price = (int) Math.round(Math.random() * 10) * power;
-		
-		// return the price
-		return price;
-	}
+	abstract public float GetCurrentPrice(int power);
 	
 	// the price the home sells at (per unit)
 	public float GetSellingPrice()

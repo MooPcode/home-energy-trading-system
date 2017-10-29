@@ -8,8 +8,8 @@ import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.*;
 import jade.lang.acl.*;
-import appliances.*;
-import retailers.*;
+
+import org.json.simple.JSONObject;
 
 public class HomeAgent extends Agent {
 	AID currentRetailer;
@@ -18,9 +18,13 @@ public class HomeAgent extends Agent {
 	Map<AID, Float> applianceUsage = new HashMap<AID, Float>();
 	Map<AID, Float> retailerOffers = new HashMap<AID, Float>();
 	private int nResponders;
+	private int maxPrice = 5; // per unit
+	private int round = 1;
+	private int maxRounds = 3;
+	private int currentRoundPower = 0;
 	
 	public HomeAgent() {
-		// changing this for a test commit
+
 	}
 	
 	protected void setup() {
@@ -60,10 +64,11 @@ public class HomeAgent extends Agent {
 			}
 		};
 		addBehaviour(messageListeningBehaviour);
-		
-		CyclicBehaviour getUsage = new CyclicBehaviour(this) {
+
+		// every 1 second, grab the latest usage figures
+		TickerBehaviour getUsage = new TickerBehaviour(this, 1000) {
 			@Override
-			public void action() {
+			public void onTick() {
 				ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
 				msg.setContent("GetUsage");
 				
@@ -75,19 +80,30 @@ public class HomeAgent extends Agent {
 		};
 		addBehaviour(getUsage);
 
+		// every 5 seconds, ask for offers from retailers
 		TickerBehaviour negotiate = new TickerBehaviour(this, 5000) {
 			@Override
 			public void onTick() {
+				// generate the request json
+				JSONObject obj = new JSONObject();
+				currentRoundPower = getPowerDemand();
+				obj.put("usage", currentRoundPower);
+				obj.put("round", round);
+
 				// Create a REQUEST message
 				ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+
+				// add all retailers
 				for(AID retailer : retailers)
 					msg.addReceiver(retailer);
-				// Set the interaction protocol
+
+				// set message properties
 				msg.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
-				// Specify the reply deadline (10 seconds)
 				msg.setReplyByDate(new Date(System.currentTimeMillis() + 10000));
-				// Set message content
-				msg.setContent("QUOTE:" + getPowerDemand());
+
+				msg.setContent(obj.toJSONString());
+
+
 				addBehaviour(new RetailerNegotiate(myAgent, msg));
 			}
 		};
@@ -151,23 +167,59 @@ public class HomeAgent extends Agent {
 				System.out.println(
 						getLocalName() + ": " + "Timeout expired: missing " + (nResponders - notifications.size()) + " responses");
 			} else {
-				System.out.println(getLocalName() + ": " + "Received notifications about every responder");
-				System.out.println(getLocalName() + ": " + "Finding best offer...");
+				log("Received notifications about every responder.");
+				log("Finding best offer...");
 
+				// compare all the offers to see if who offered the best
 				AID bestRetailer = retailers.get(0);
 				for(AID retailer : retailers)
 				{
 					if(!retailerOffers.containsKey(retailer))
 						continue;
 
-					System.out.println(retailer.getLocalName() + " offered $" + retailerOffers.get(retailer));
+					log(retailer.getLocalName() + " offered $" + retailerOffers.get(retailer) +
+							" ($" + (retailerOffers.get(retailer) / currentRoundPower) + " per unit)");
 
 					if(retailerOffers.get(bestRetailer) > retailerOffers.get(retailer))
 						bestRetailer = retailer;
 				}
 
-				System.out.println(bestRetailer.getLocalName() + " had the best offer!");
+				log("Round " + round + " of max " + maxRounds);
+				// make sure the best offer is below the max
+				if(retailerOffers.get(bestRetailer) / currentRoundPower > maxPrice && round < maxRounds)
+				{
+					log("None of the offers were below the max!");
+					log("Attempting to renegotiate (round " + round + ")");
+
+					round++;
+
+					ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+
+					for(AID retailer : retailers)
+						msg.addReceiver(retailer)
+								;
+					msg.setProtocol(FIPANames.InteractionProtocol.FIPA_REQUEST);
+					msg.setReplyByDate(new Date(System.currentTimeMillis() + 10000));
+
+					JSONObject obj = new JSONObject();
+					obj.put("usage", getPowerDemand());
+					obj.put("round", round);
+					msg.setContent(obj.toJSONString());
+
+					addBehaviour(new RetailerNegotiate(myAgent, msg));
+
+					return;
+				}
+
+				log(bestRetailer.getLocalName() + " had the best offer!");
+				currentRetailer = bestRetailer;
+				round = 1;
 			}
 		}
+	}
+
+	public void log(String msg)
+	{
+		System.out.println(getLocalName() + ": " + msg);
 	}
 }
